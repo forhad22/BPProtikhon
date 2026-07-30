@@ -1,0 +1,362 @@
+
+"use client";
+
+import { useState, useCallback, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import Spinner from "@/components/Spinner";
+
+interface Customer {
+  id: number;
+  customerId: string;
+  name: string;
+  mobile: string;
+  walletBalance: string;
+  goldenCustomerCount: number;
+  totalCashbackAmount?: string;
+}
+
+interface CashbackResult {
+  transactionId: number;
+  customerName: string;
+  totalAmount: number;
+  customerShare: number;
+  referrerShare: number;
+  incentiveShare: number;
+  companyShare: number;
+  isGolden: boolean;
+  referrerClaimed: boolean;
+  newGoldenCount: number;
+  milestones: Array<{ milestone: string; rewardName: string }>;
+}
+
+function formatAmount(amount: number | string) {
+  return `৳${parseFloat(String(amount)).toLocaleString("bn-BD", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+export default function CashbackEntryPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [amount, setAmount] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<CashbackResult | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!loading && (!user || user.role !== "admin")) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  const searchCustomers = useCallback(async (q: string) => {
+    if (!q.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/customers/search?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      setSearchResults(data.customers || []);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => searchCustomers(searchQuery), 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchCustomers]);
+
+  function selectCustomer(c: Customer) {
+    setSelectedCustomer(c);
+    setSearchQuery("");
+    setSearchResults([]);
+    setResult(null);
+    setError("");
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedCustomer) return;
+    setError("");
+    setResult(null);
+    setSubmitting(true);
+
+    try {
+      const res = await fetch("/api/cashback/entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: selectedCustomer.id,
+          amount: parseFloat(amount),
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "এন্ট্রি ব্যর্থ হয়েছে");
+      } else {
+        setResult(data.data);
+        setAmount("");
+        setSelectedCustomer(null);
+      }
+    } catch {
+      setError("সার্ভার ত্রুটি। আবার চেষ্টা করুন।");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const numAmount = parseFloat(amount) || 0;
+  const preview = {
+    customer: (numAmount * 0.5).toFixed(2),
+    referrer: (numAmount * 0.15).toFixed(2),
+    incentive: (numAmount * 0.2).toFixed(2),
+    company: (numAmount * 0.15).toFixed(2),
+  };
+  // Golden count preview based on TOTAL cashback amount (not wallet balance)
+  // Every 500 taka in total_amount = 1 golden count
+  const previewOldTotalCashback = selectedCustomer ? parseFloat(selectedCustomer.totalCashbackAmount || "0") : 0;
+  const previewNewTotalCashback = previewOldTotalCashback + numAmount;
+  const previewOldGolden = selectedCustomer ? selectedCustomer.goldenCustomerCount : 0;
+  const previewNewGolden = Math.floor(previewNewTotalCashback / 500);
+  const previewGoldenEarned = previewNewGolden - previewOldGolden;
+  const previewIsGolden = previewGoldenEarned > 0;
+  const previewRemainingForNextGolden = 500 - (previewNewTotalCashback % 500);
+
+  return (
+    <div className="p-4 lg:p-8 pt-20 lg:pt-8 max-w-xl mx-auto space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-black text-slate-800">ক্যাশব্যাক এন্ট্রি</h1>
+        <p className="text-slate-400 text-xs mt-1">কাস্টমার ক্রয়ের ওপর নতুন ক্যাশব্যাক রেকর্ড করুন</p>
+      </div>
+
+      {/* Success Result Container */}
+      {result && (
+        <div className="bg-emerald-50/50 border border-emerald-100 rounded-3xl p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🎉</span>
+            <h3 className="font-extrabold text-emerald-800 text-sm">ক্যাশব্যাক এন্ট্রি সফল হয়েছে!</h3>
+          </div>
+          <div className="space-y-2 text-xs text-emerald-700">
+            <p><span className="font-bold text-slate-500">গ্রাহক:</span> {result.customerName}</p>
+            <p><span className="font-bold text-slate-500">মোট অ্যামাউন্ট:</span> {formatAmount(result.totalAmount)}</p>
+            
+            <div className="bg-white rounded-2xl p-4 border border-emerald-50/50 space-y-2 text-xs">
+              <div className="flex justify-between font-medium">
+                <span className="text-slate-500">গ্রাহক শেয়ার (৫০%)</span>
+                <span className="font-bold text-emerald-600">{formatAmount(result.customerShare)}</span>
+              </div>
+              <div className="flex justify-between font-medium">
+                <span className="text-slate-500">{result.referrerClaimed ? "রেফারার আয় (১৫%)" : "আনক্লেইমড (১৫%)"}</span>
+                <span className="font-bold text-blue-600">{formatAmount(result.referrerShare)}</span>
+              </div>
+              <div className="flex justify-between font-medium">
+                <span className="text-slate-500">ইনসেন্টিভ শেয়ার (২০%)</span>
+                <span className="font-bold text-amber-600">{formatAmount(result.incentiveShare)}</span>
+              </div>
+              <div className="flex justify-between font-medium">
+                <span className="text-slate-500">কোম্পানি শেয়ার (১৫%)</span>
+                <span className="font-bold text-purple-600">{formatAmount(result.companyShare)}</span>
+              </div>
+            </div>
+
+            {result.isGolden && (
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                <span>⭐</span>
+                <span className="font-bold text-amber-800">
+                  গোল্ডেন কাউন্ট আপডেট হয়েছে: {result.newGoldenCount} বার
+                </span>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => setResult(null)}
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+          >
+            নতুন এন্ট্রি শুরু করুন
+          </button>
+        </div>
+      )}
+
+      {/* Main Entry Panel */}
+      <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-5">
+        {/* Customer Search Section */}
+        <div className="space-y-2">
+          <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wide">
+            গ্রাহক নির্বাচন করুন
+          </label>
+          {selectedCustomer ? (
+            <div className="flex items-center justify-between bg-indigo-50/50 border border-indigo-100 rounded-2xl px-4 py-3">
+              <div>
+                <p className="font-bold text-slate-800 text-sm">{selectedCustomer.name}</p>
+                <p className="text-xs text-indigo-600 font-mono mt-0.5">
+                  {selectedCustomer.customerId} • {selectedCustomer.mobile}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  ব্যালেন্স: {formatAmount(selectedCustomer.walletBalance)} | গোল্ডেন: {selectedCustomer.goldenCustomerCount}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedCustomer(null)}
+                className="text-slate-400 hover:text-red-500 text-lg transition-colors p-1"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-200 outline-none text-sm transition-all"
+                placeholder="মোবাইল বা কাস্টমার আইডি লিখুন..."
+              />
+              {searching && (
+                <div className="absolute right-3 top-3.5">
+                  <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+              {searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 bg-white border border-slate-100 rounded-2xl shadow-xl mt-1.5 z-10 overflow-hidden divide-y divide-slate-50">
+                  {searchResults.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => selectCustomer(c)}
+                      className="w-full text-left px-4 py-3 hover:bg-indigo-50/40 transition-all"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-bold text-slate-800 text-xs">{c.name}</p>
+                          <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                            {c.customerId} • {c.mobile}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-bold bg-slate-100 px-2.5 py-1 rounded-lg text-slate-600">
+                          {formatAmount(c.walletBalance)}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Transaction Amount Submission */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wide">
+              মোট ক্রয় অ্যামাউন্ট (৳)
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-3 text-slate-400 text-lg font-black">৳</span>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full pl-8 pr-4 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-200 outline-none text-base font-black text-slate-800"
+                placeholder="অ্যামাউন্ট লিখুন"
+                min="1"
+                step="0.01"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Allocation Progress Breakdown */}
+          {numAmount > 0 && (
+            <div className="bg-slate-50 rounded-2xl p-4 space-y-3.5 border border-slate-100">
+              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                বণ্টন প্রিভিউ
+              </p>
+              
+              {/* Graphical Stacked Distribution Bar */}
+              <div className="h-3 w-full bg-slate-200 rounded-full flex overflow-hidden">
+                <div style={{ width: "50%" }} className="bg-emerald-500" title="গ্রাহক (৫০%)" />
+                <div style={{ width: "15%" }} className="bg-blue-500" title="রেফারেল (১৫%)" />
+                <div style={{ width: "20%" }} className="bg-amber-500" title="ইনসেন্টিভ (২০%)" />
+                <div style={{ width: "15%" }} className="bg-purple-500" title="কোম্পানি (১৫%)" />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-medium">
+                  <span className="text-slate-500 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> গ্রাহক শেয়ার (৫০%)
+                  </span>
+                  <span className="font-bold text-emerald-600">{formatAmount(preview.customer)}</span>
+                </div>
+                <div className="flex justify-between text-xs font-medium">
+                  <span className="text-slate-500 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> জেনারেশন আয় (১৫%)
+                  </span>
+                  <span className="font-bold text-blue-600">{formatAmount(preview.referrer)}</span>
+                </div>
+                <div className="flex justify-between text-xs font-medium">
+                  <span className="text-slate-500 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> ইনসেন্টিভ ফান্ড (২০%)
+                  </span>
+                  <span className="font-bold text-amber-600">{formatAmount(preview.incentive)}</span>
+                </div>
+                <div className="flex justify-between text-xs font-medium">
+                  <span className="text-slate-500 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-500" /> কোম্পানি লাভ (১৫%)
+                  </span>
+                  <span className="font-bold text-purple-600">{formatAmount(preview.company)}</span>
+                </div>
+                {previewIsGolden && (
+                  <div className="flex items-center gap-2 bg-amber-50/50 border border-amber-100/50 rounded-xl px-3 py-2 mt-2">
+                    <span>⭐</span>
+                    <span className="text-[10px] font-bold text-amber-700">
+                      মোট {previewNewGolden} বার গোল্ডেন হয়েছে (প্রতি ৫০০ টাকায় ১ বার)
+                    </span>
+                  </div>
+                )}
+                {!previewIsGolden && selectedCustomer && (
+                  <div className="text-[10px] text-slate-400 mt-2 text-center">
+                    গোল্ডেন হতে আরও {previewRemainingForNextGolden} টাকা বাকি
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-100 text-red-700 px-4 py-2.5 rounded-xl text-xs font-medium">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={submitting || !selectedCustomer || !amount}
+            className="w-full py-3.5 gradient-primary text-white font-bold rounded-2xl hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? (
+              <Spinner />
+            ) : (
+              <>
+                <span>💳</span> ক্যাশব্যাক হিসাব করুন
+              </>
+            )}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
