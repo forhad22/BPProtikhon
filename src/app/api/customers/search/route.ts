@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq, or, like } from "drizzle-orm";
+import { eq, or, like, and } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ customers: [] });
     }
 
-    const results = await db
+    const customers = await db
       .select({
         id: users.id,
         customerId: users.customerId,
@@ -24,20 +24,22 @@ export async function GET(req: NextRequest) {
         walletBalance: users.walletBalance,
         goldenCustomerCount: users.goldenCustomerCount,
         milestonesAchieved: users.milestonesAchieved,
+        totalCashbackAmount: users.totalCashbackAmount,
         referredBy: users.referredBy,
         createdAt: users.createdAt,
       })
       .from(users)
       .where(
-        or(
-          like(users.customerId, `%${q}%`),
-          like(users.mobile, `%${q}%`),
-          like(users.name, `%${q}%`)
+        and(
+          eq(users.role, "customer"),
+          or(
+            like(users.customerId, `%${q}%`),
+            like(users.mobile, `%${q}%`),
+            like(users.name, `%${q}%`)
+          )
         )
       )
       .limit(10);
-
-    const customers = results.filter((u) => u.customerId !== "ADMIN");
 
     return NextResponse.json({ customers });
   } catch (error) {

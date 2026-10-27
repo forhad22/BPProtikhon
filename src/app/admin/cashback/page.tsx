@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
@@ -118,11 +117,12 @@ export default function CashbackEntryPage() {
   }
 
   const numAmount = parseFloat(amount) || 0;
+  // Updated allocation: গ্রাহক ৩৫%, কোম্পানি ২০%, জেনারেশন ১৫%, ইনসেন্টিভ ৩০%
   const preview = {
-    customer: (numAmount * 0.5).toFixed(2),
+    customer: (numAmount * 0.35).toFixed(2),
+    company: (numAmount * 0.20).toFixed(2),
     referrer: (numAmount * 0.15).toFixed(2),
-    incentive: (numAmount * 0.2).toFixed(2),
-    company: (numAmount * 0.15).toFixed(2),
+    incentive: (numAmount * 0.30).toFixed(2),
   };
   // Golden count preview based on TOTAL cashback amount (not wallet balance)
   // Every 500 taka in total_amount = 1 golden count
@@ -155,20 +155,20 @@ export default function CashbackEntryPage() {
             
             <div className="bg-white rounded-2xl p-4 border border-emerald-50/50 space-y-2 text-xs">
               <div className="flex justify-between font-medium">
-                <span className="text-slate-500">গ্রাহক শেয়ার (৫০%)</span>
+                <span className="text-slate-500">গ্রাহক শেয়ার (৩৫%)</span>
                 <span className="font-bold text-emerald-600">{formatAmount(result.customerShare)}</span>
+              </div>
+              <div className="flex justify-between font-medium">
+                <span className="text-slate-500">কোম্পানি শেয়ার (২০%)</span>
+                <span className="font-bold text-purple-600">{formatAmount(result.companyShare)}</span>
               </div>
               <div className="flex justify-between font-medium">
                 <span className="text-slate-500">{result.referrerClaimed ? "রেফারার আয় (১৫%)" : "আনক্লেইমড (১৫%)"}</span>
                 <span className="font-bold text-blue-600">{formatAmount(result.referrerShare)}</span>
               </div>
               <div className="flex justify-between font-medium">
-                <span className="text-slate-500">ইনসেন্টিভ শেয়ার (২০%)</span>
+                <span className="text-slate-500">ইনসেন্টিভ শেয়ার (৩০%)</span>
                 <span className="font-bold text-amber-600">{formatAmount(result.incentiveShare)}</span>
-              </div>
-              <div className="flex justify-between font-medium">
-                <span className="text-slate-500">কোম্পানি শেয়ার (১৫%)</span>
-                <span className="font-bold text-purple-600">{formatAmount(result.companyShare)}</span>
               </div>
             </div>
 
@@ -288,18 +288,24 @@ export default function CashbackEntryPage() {
               
               {/* Graphical Stacked Distribution Bar */}
               <div className="h-3 w-full bg-slate-200 rounded-full flex overflow-hidden">
-                <div style={{ width: "50%" }} className="bg-emerald-500" title="গ্রাহক (৫০%)" />
-                <div style={{ width: "15%" }} className="bg-blue-500" title="রেফারেল (১৫%)" />
-                <div style={{ width: "20%" }} className="bg-amber-500" title="ইনসেন্টিভ (২০%)" />
-                <div style={{ width: "15%" }} className="bg-purple-500" title="কোম্পানি (১৫%)" />
+                <div style={{ width: "35%" }} className="bg-emerald-500" title="গ্রাহক (৩৫%)" />
+                <div style={{ width: "20%" }} className="bg-purple-500" title="কোম্পানি (২০%)" />
+                <div style={{ width: "15%" }} className="bg-blue-500" title="জেনারেশন (১৫%)" />
+                <div style={{ width: "30%" }} className="bg-amber-500" title="ইনসেন্টিভ (৩০%)" />
               </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-slate-500 flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> গ্রাহক শেয়ার (৫০%)
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> গ্রাহক শেয়ার (৩৫%)
                   </span>
                   <span className="font-bold text-emerald-600">{formatAmount(preview.customer)}</span>
+                </div>
+                <div className="flex justify-between text-xs font-medium">
+                  <span className="text-slate-500 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-500" /> কোম্পানি লাভ (২০%)
+                  </span>
+                  <span className="font-bold text-purple-600">{formatAmount(preview.company)}</span>
                 </div>
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-slate-500 flex items-center gap-1.5">
@@ -309,15 +315,9 @@ export default function CashbackEntryPage() {
                 </div>
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-slate-500 flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> ইনসেন্টিভ ফান্ড (২০%)
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> ইনসেন্টিভ ফান্ড (৩০%)
                   </span>
                   <span className="font-bold text-amber-600">{formatAmount(preview.incentive)}</span>
-                </div>
-                <div className="flex justify-between text-xs font-medium">
-                  <span className="text-slate-500 flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-purple-500" /> কোম্পানি লাভ (১৫%)
-                  </span>
-                  <span className="font-bold text-purple-600">{formatAmount(preview.company)}</span>
                 </div>
                 {previewIsGolden && (
                   <div className="flex items-center gap-2 bg-amber-50/50 border border-amber-100/50 rounded-xl px-3 py-2 mt-2">

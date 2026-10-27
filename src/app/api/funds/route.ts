@@ -8,7 +8,17 @@ export async function GET() {
   try {
     await requireAdmin();
 
-    const [currentFunds] = await db.select().from(funds).limit(1);
+    let [currentFunds] = await db.select().from(funds).limit(1);
+
+    if (!currentFunds) {
+      await db.insert(funds).values({
+        incentiveFundBalance: "0",
+        companyFundBalance: "0",
+        unclaimedFundBalance: "0",
+      });
+      const [newFunds] = await db.select().from(funds).limit(1);
+      currentFunds = newFunds;
+    }
 
     const incentiveHistory = await db
       .select()

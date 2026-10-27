@@ -38,10 +38,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const customerShare = parseFloat((totalAmount * 0.5).toFixed(2));
+    // New distribution percentages:
+    // গ্রাহক: ৩৫% (0.35)
+    // কোম্পানি: ২০% (0.20)
+    // জেনারেশন/রেফারার: ১৫% (0.15)
+    // ইনসেন্টিভ ফান্ড: ৩০% (0.30)
+    const customerShare = parseFloat((totalAmount * 0.35).toFixed(2));
+    const companyShare = parseFloat((totalAmount * 0.20).toFixed(2));
     const referrerShare = parseFloat((totalAmount * 0.15).toFixed(2));
-    const incentiveShare = parseFloat((totalAmount * 0.2).toFixed(2));
-    const companyShare = parseFloat((totalAmount * 0.15).toFixed(2));
+    const incentiveShare = parseFloat((totalAmount * 0.30).toFixed(2));
 
     // Find customer
     const [customer] = await db
@@ -75,11 +80,21 @@ export async function POST(req: NextRequest) {
       referrer = ref || null;
     }
 
-    // Get current funds
-    const [currentFunds] = await db.select().from(funds).limit(1);
+    // Get current funds (auto-initialize if not yet created in DB)
+    let [currentFunds] = await db.select().from(funds).limit(1);
+    if (!currentFunds) {
+      await db.insert(funds).values({
+        incentiveFundBalance: "0",
+        companyFundBalance: "0",
+        unclaimedFundBalance: "0",
+      });
+      const [newFunds] = await db.select().from(funds).limit(1);
+      currentFunds = newFunds;
+    }
+
     if (!currentFunds) {
       return NextResponse.json(
-        { error: "ফান্ড রেকর্ড পাওয়া যায়নি" },
+        { error: "ফান্ড রেকর্ড পাওয়া যায়নি এবং তৈরি করা সম্ভব হয়নি" },
         { status: 500 }
       );
     }
@@ -110,7 +125,7 @@ export async function POST(req: NextRequest) {
         [newWalletBalance.toFixed(2), newTotalCashback.toFixed(2), newGoldenCount, customer.id]
       );
 
-      // 2. Create cashback transaction record
+      // 2. Create cashback transaction record (use 1/0 for boolean in MySQL prepared statement)
       const [cashbackInsertResult] = await connection.execute(
         `INSERT INTO cashback_transactions (customer_id, total_amount, customer_share, referrer_share, referrer_id, incentive_fund_share, company_fund_share, is_golden, referrer_claimed, entered_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -121,8 +136,8 @@ export async function POST(req: NextRequest) {
           referrer?.id ?? null,
           incentiveShare.toFixed(2),
           companyShare.toFixed(2),
-          isGolden,
-          referrer !== null,
+          isGolden ? 1 : 0,
+          referrer !== null ? 1 : 0,
           session.userId,
         ]
       );
@@ -134,7 +149,7 @@ export async function POST(req: NextRequest) {
         [
           customer.id,
           customerShare.toFixed(2),
-          `ক্যাশব্যাক প্রাপ্তি - মোট ${totalAmount} টাকার ৫০%`,
+          `ক্যাশব্যাক প্রাপ্তি - মোট ${totalAmount} টাকার ৩৫%`,
           cashbackTxId,
           newWalletBalance.toFixed(2),
         ]
@@ -231,7 +246,7 @@ export async function POST(req: NextRequest) {
 
           for (const notif of milestoneNotifications) {
             await connection.execute(
-              "INSERT INTO notifications (customer_id, milestone, reward_name, is_read) VALUES (?, ?, ?, false)",
+              "INSERT INTO notifications (customer_id, milestone, reward_name, is_read) VALUES (?, ?, ?, 0)",
               [customer.id, notif.milestone, notif.rewardName]
             );
           }
