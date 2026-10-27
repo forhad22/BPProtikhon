@@ -9,6 +9,7 @@ const navItems = [
   { href: "/admin/dashboard", icon: "📊", label: "ড্যাশবোর্ড" },
   { href: "/admin/cashback", icon: "💰", label: "ক্যাশব্যাক এন্ট্রি" },
   { href: "/admin/customers", icon: "👥", label: "কাস্টমার তালিকা" },
+  { href: "/admin/referrals", icon: "🔗", label: "রেফারেল ট্র্যাকিং" },
   { href: "/admin/notifications", icon: "🔔", label: "নোটিফিকেশন" },
   { href: "/admin/funds", icon: "🏦", label: "ফান্ড ম্যানেজমেন্ট" },
 ];
@@ -101,48 +102,39 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile header */}
+      {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-indigo-800 px-4 py-3 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-2">
           <span className="text-xl">🛒</span>
-          <span className="text-white font-bold">BazarProtikhon</span>
+          <span className="text-white font-bold">BazarProtikhon Admin</span>
         </div>
-        <div className="flex items-center gap-3">
-          {unreadCount > 0 && (
-            <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
-              {unreadCount}
-            </span>
-          )}
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="text-white text-2xl"
-          >
-            {mobileOpen ? "✕" : "☰"}
-          </button>
-        </div>
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="text-white p-2 focus:outline-none"
+        >
+          {mobileOpen ? "✕" : "☰"}
+        </button>
       </div>
 
-      {/* Mobile overlay */}
+      {/* Mobile drawer */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          className="lg:hidden fixed inset-0 z-20 bg-black/50"
           onClick={() => setMobileOpen(false)}
         />
       )}
-
-      {/* Mobile drawer */}
-      <div
-        className={`lg:hidden fixed top-0 left-0 bottom-0 z-50 w-72 bg-indigo-800 transform transition-transform ${
+      <aside
+        className={`lg:hidden fixed top-0 left-0 bottom-0 z-20 w-64 bg-indigo-800 transition-transform duration-300 ease-in-out ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <SidebarContent />
-      </div>
+      </aside>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-indigo-800 flex-col z-20">
+      <aside className="hidden lg:flex flex-col w-64 bg-indigo-800 fixed top-0 left-0 bottom-0 z-20 shadow-xl">
         <SidebarContent />
-      </div>
+      </aside>
     </>
   );
 }

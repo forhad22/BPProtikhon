@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Spinner from "@/components/Spinner";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const refFromUrl = searchParams.get("ref") || "";
+
   const [form, setForm] = useState({
     name: "",
     mobile: "",
@@ -17,6 +20,12 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (refFromUrl) {
+      setForm((prev) => ({ ...prev, referralCode: refFromUrl.toUpperCase() }));
+    }
+  }, [refFromUrl]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -46,7 +55,7 @@ export default function RegisterPage() {
           name: form.name,
           mobile: form.mobile,
           password: form.password,
-          referralCode: form.referralCode || undefined,
+          referralCode: form.referralCode ? form.referralCode.trim().toUpperCase() : undefined,
         }),
       });
       const data = await res.json();
@@ -67,6 +76,131 @@ export default function RegisterPage() {
   }
 
   return (
+    <div className="bg-white rounded-2xl shadow-xl p-8">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+        নতুন অ্যাকাউন্ট খুলুন
+      </h2>
+
+      {refFromUrl && (
+        <div className="bg-indigo-50 border border-indigo-200 text-indigo-700 px-4 py-3 rounded-xl mb-4 text-xs font-semibold flex items-center gap-2">
+          <span className="text-base">🎁</span>
+          <span>
+            রেফারেল লিংক থেকে এসেছেন! কোড: <strong className="font-mono text-indigo-900">{refFromUrl.toUpperCase()}</strong>
+          </span>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm font-medium">
+          ✅ {success}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            পুরো নাম <span className="text-red-500">*</span>
+          </label>
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition"
+            placeholder="আপনার নাম লিখুন"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            মোবাইল নাম্বার <span className="text-red-500">*</span>
+          </label>
+          <input
+            name="mobile"
+            type="tel"
+            value={form.mobile}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition"
+            placeholder="০১XXXXXXXXX"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            পাসওয়ার্ড <span className="text-red-500">*</span>
+          </label>
+          <input
+            name="password"
+            type="password"
+            value={form.password}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition"
+            placeholder="কমপক্ষে ৬ অক্ষর"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            পাসওয়ার্ড নিশ্চিত করুন <span className="text-red-500">*</span>
+          </label>
+          <input
+            name="confirmPassword"
+            type="password"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition"
+            placeholder="পাসওয়ার্ড আবার লিখুন"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center justify-between">
+            <span>রেফারেল কোড</span>
+            <span className="text-xs text-gray-400 font-normal">
+              {refFromUrl ? "স্বয়ংক্রিয়ভাবে যুক্ত" : "(ঐচ্ছিক)"}
+            </span>
+          </label>
+          <input
+            name="referralCode"
+            value={form.referralCode}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition uppercase font-mono font-semibold text-indigo-700"
+            placeholder="BP-XXXXX"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-3 px-4 gradient-primary text-white font-semibold rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2 shadow-md mt-2"
+        >
+          {loading ? <Spinner /> : "রেজিস্ট্রেশন করুন"}
+        </button>
+      </form>
+
+      <div className="mt-6 text-center text-sm text-gray-500">
+        ইতিমধ্যে অ্যাকাউন্ট আছে?{" "}
+        <Link
+          href="/login"
+          className="text-indigo-600 font-semibold hover:underline"
+        >
+          লগইন করুন
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
@@ -77,115 +211,9 @@ export default function RegisterPage() {
           <p className="text-gray-500 mt-1">ক্যাশব্যাক লয়্যালটি সিস্টেম</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-            নতুন অ্যাকাউন্ট খুলুন
-          </h2>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm font-medium">
-              ✅ {success}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                পুরো নাম <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition"
-                placeholder="আপনার নাম লিখুন"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                মোবাইল নাম্বার <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="mobile"
-                type="tel"
-                value={form.mobile}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition"
-                placeholder="০১XXXXXXXXX"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                পাসওয়ার্ড <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="password"
-                type="password"
-                value={form.password}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition"
-                placeholder="কমপক্ষে ৬ অক্ষর"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                পাসওয়ার্ড নিশ্চিত করুন <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="confirmPassword"
-                type="password"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition"
-                placeholder="পাসওয়ার্ড আবার লিখুন"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                রেফারেল কোড{" "}
-                <span className="text-gray-400">(ঐচ্ছিক)</span>
-              </label>
-              <input
-                name="referralCode"
-                value={form.referralCode}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition uppercase"
-                placeholder="BP-XXXXX"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 gradient-primary text-white font-semibold rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2 shadow-md mt-2"
-            >
-              {loading ? <Spinner /> : "রেজিস্ট্রেশন করুন"}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center text-sm text-gray-500">
-            ইতিমধ্যে অ্যাকাউন্ট আছে?{" "}
-            <Link
-              href="/login"
-              className="text-indigo-600 font-semibold hover:underline"
-            >
-              লগইন করুন
-            </Link>
-          </div>
-        </div>
+        <Suspense fallback={<div className="bg-white rounded-2xl shadow-xl p-8 text-center text-gray-400"><Spinner /> লোড হচ্ছে...</div>}>
+          <RegisterForm />
+        </Suspense>
       </div>
     </div>
   );

@@ -13,7 +13,10 @@ const globalForDb = globalThis as typeof globalThis & {
 
 export const pool =
   globalForDb.__arenaNextJsMysqlPool ??
-  mysql.createPool(databaseUrl);
+  mysql.createPool({
+    uri: databaseUrl,
+    charset: "utf8mb4",
+  });
 
 if (process.env.NODE_ENV !== "production") {
   globalForDb.__arenaNextJsMysqlPool = pool;
