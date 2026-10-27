@@ -19,7 +19,7 @@ interface UserData {
 const MILESTONES = [
   { count: 20, reward: "মোবাইল ফোন", icon: "📱" },
   { count: 40, reward: "রাইস কুকার", icon: "🍚" },
-  { count: 80, reward: "ফ্রিজ", icon: "❄️" },
+  { count: 80, reward: "বিশেষ মেগা গিফট", icon: "🎁" },
 ];
 
 function formatAmount(amount: string | number) {

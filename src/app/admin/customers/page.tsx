@@ -69,7 +69,7 @@ export default function CustomersPage() {
   const milestoneLabels: Record<string, string> = {
     "20": "📱",
     "40": "🍚",
-    "80": "❄️",
+    "80": "🎁",
   };
 
   if (loading || fetching) {

@@ -19,7 +19,7 @@ interface Notification {
 const milestoneIcons: Record<string, string> = {
   "20": "📱",
   "40": "🍚",
-  "80": "❄️",
+  "80": "🎁",
 };
 
 export default function NotificationsPage() {

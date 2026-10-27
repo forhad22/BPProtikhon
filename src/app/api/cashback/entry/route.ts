@@ -14,7 +14,7 @@ import { requireAdmin } from "@/lib/auth";
 const MILESTONES: Record<number, string> = {
   20: "মোবাইল ফোন",
   40: "রাইস কুকার",
-  80: "ফ্রিজ",
+  80: "বিশেষ মেগা গিফট",
 };
 
 export async function POST(req: NextRequest) {

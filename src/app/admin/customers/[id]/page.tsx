@@ -51,7 +51,7 @@ function formatAmount(amount: string | number) {
 const milestoneRewards: Record<string, string> = {
   "20": "মোবাইল ফোন 📱",
   "40": "রাইস কুকার 🍚",
-  "80": "ফ্রিজ ❄️",
+  "80": "বিশেষ মেগা গিফট 🎁",
 };
 
 const MILESTONES = [20, 40, 80];
